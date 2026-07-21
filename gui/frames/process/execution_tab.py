@@ -5,6 +5,8 @@ from utils.gui import create_option_section, create_popup
 # from core import BarcodeConfig, InputConfig
 from gui.config import BarcodeConfigGUI, InputConfigGUI
 
+from gui.frames.clustering_controls import create_clustering_controls
+
 def create_execution_frame(parent, config: BarcodeConfigGUI, input_config: InputConfigGUI):
     """Create the execution settings tab"""
     frame = ttk.Frame(parent)
@@ -274,6 +276,7 @@ def create_execution_frame(parent, config: BarcodeConfigGUI, input_config: Input
     )
     row_idx += 2
 
+    row_idx = create_clustering_controls(frame, config.cluster, row_idx, header_font=header)
     tk.Label(frame, text="Configuration Settings", font=header).grid(
         row=row_idx, column=0, columnspan=3, sticky="w", padx=(5, 5), pady=(10, 5)
     )

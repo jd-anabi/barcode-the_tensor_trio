@@ -20,6 +20,7 @@ from core.config import (
     ComparisonConfig,
     BarcodeConfig,
     ModuleConfig,
+    ClusterConfig,
 )
 
 from core.results import (
@@ -49,6 +50,7 @@ __all__ = [
     "ComparisonConfig",
     "AnalysisConfig",
     "ModuleConfig",
+    "ClusterConfig",
     "ResultsBase",
     "BinarizationResults",
     "FlowResults",

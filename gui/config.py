@@ -681,6 +681,68 @@ class VisualizationConfigGUI:
         self._indices.set(new_config._indices)
 
 @dataclass
+class ClusterConfigGUI:
+    """Auto-generated GUI wrapper for ClusterConfig"""
+    _core_config: ClusterConfig = field(default_factory=ClusterConfig)
+
+    enabled: tk.BooleanVar = field(init=False)
+    mode: tk.StringVar = field(init=False)
+    selected_metrics: List[str] = field(default_factory=list)
+    pca_variance_threshold: tk.DoubleVar = field(init=False)
+    pca_n_components: tk.IntVar = field(init=False)
+    min_cluster_size: tk.IntVar = field(init=False)
+    min_samples: tk.IntVar = field(init=False)
+    n_bootstrap: tk.IntVar = field(init=False)
+    direction_handling: tk.StringVar = field(init=False)
+    min_channels: tk.IntVar = field(init=False)
+    random_seed: tk.IntVar = field(init=False)
+
+    def __post_init__(self):
+        self.enabled = tk.BooleanVar(value=self._core_config.enabled)
+        self.mode = tk.StringVar(value=self._core_config.mode)
+        self.selected_metrics = list(self._core_config.selected_metrics)
+        self.pca_variance_threshold = tk.DoubleVar(value=self._core_config.pca_variance_threshold)
+        self.pca_n_components = tk.IntVar(value=self._core_config.pca_n_components)
+        self.min_cluster_size = tk.IntVar(value=self._core_config.min_cluster_size)
+        self.min_samples = tk.IntVar(value=self._core_config.min_samples)
+        self.n_bootstrap = tk.IntVar(value=self._core_config.n_bootstrap)
+        self.direction_handling = tk.StringVar(value=self._core_config.direction_handling)
+        self.min_channels = tk.IntVar(value=self._core_config.min_channels)
+        self.random_seed = tk.IntVar(value=self._core_config.random_seed)
+
+    @property
+    def config(self) -> ClusterConfig:
+        """Get current config from GUI values"""
+        return ClusterConfig(
+            enabled=self.enabled.get(),
+            mode=self.mode.get(),
+            selected_metrics=self.selected_metrics,
+            pca_variance_threshold=self.pca_variance_threshold.get(),
+            pca_n_components=self.pca_n_components.get(),
+            min_cluster_size=self.min_cluster_size.get(),
+            min_samples=self.min_samples.get(),
+            n_bootstrap=self.n_bootstrap.get(),
+            direction_handling=self.direction_handling.get(),
+            min_channels=self.min_channels.get(),
+            random_seed=self.random_seed.get(),
+        )
+
+    def update_gui(self, new_config: ClusterConfig):
+        """Update GUI from new config values"""
+        self._core_config = new_config
+        self.enabled.set(new_config.enabled)
+        self.mode.set(new_config.mode)
+        self.selected_metrics.set(new_config.selected_metrics)
+        self.pca_variance_threshold.set(new_config.pca_variance_threshold)
+        self.pca_n_components.set(new_config.pca_n_components)
+        self.min_cluster_size.set(new_config.min_cluster_size)
+        self.min_samples.set(new_config.min_samples)
+        self.n_bootstrap.set(new_config.n_bootstrap)
+        self.direction_handling.set(new_config.direction_handling)
+        self.min_channels.set(new_config.min_channels)
+        self.random_seed.set(new_config.random_seed)
+
+@dataclass
 class BarcodeConfigGUI:
     """Auto-generated master GUI configuration"""
     _core_config: BarcodeConfig = field(default_factory=BarcodeConfig)
@@ -692,6 +754,7 @@ class BarcodeConfigGUI:
     optical_flow_parameters: OpticalFlowConfigGUI = field(init=False)
     reader: ReaderConfigGUI = field(init=False)
     writer: WriterConfigGUI = field(init=False)
+    cluster: ClusterConfigGUI = field(init=False)
 
     def __post_init__(self):
         self.channels = ChannelConfigGUI(self._core_config.channels)
@@ -701,6 +764,7 @@ class BarcodeConfigGUI:
         self.optical_flow_parameters = OpticalFlowConfigGUI(self._core_config.optical_flow_parameters)
         self.reader = ReaderConfigGUI(self._core_config.reader)
         self.writer = WriterConfigGUI(self._core_config.writer)
+        self.cluster = ClusterConfigGUI(self._core_config.cluster)
 
     @property
     def config(self) -> BarcodeConfig:
@@ -713,6 +777,7 @@ class BarcodeConfigGUI:
             optical_flow_parameters=self.optical_flow_parameters.config,
             reader=self.reader.config,
             writer=self.writer.config,
+            cluster=self.cluster.config,
         )
 @dataclass
 class AnalysisConfigGUI:

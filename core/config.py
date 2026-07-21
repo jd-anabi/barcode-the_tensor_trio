@@ -179,6 +179,32 @@ class AnalysisConfig(BaseConfig):
     visualization: VisualizationConfig = field(default_factory=VisualizationConfig)
 
 @dataclass
+class ClusterConfig(BaseConfig):
+    """Unsupervised clustering of BARCODE metrics for regime discovery."""
+
+    # global config parameters
+    enabled: bool = False # whether clustering toggle is enabled
+    mode: str = "pca"  # cluster space: "full", "subset", or "pca"
+
+    # subset mode config parameters
+    selected_metrics: List[str] = field(default_factory=list)  # needed for the subset mode; metric header names, must be >= 2
+
+    # pca mode config parameters
+    pca_variance_threshold: float = 0.9  # cumulative variance threshold retained when pca_n_components == 0
+    pca_n_components: int = 0  # explicit PCA component count; if 0, then use the variance threshold
+
+    # HDBSCAN config hyperparameters
+    min_cluster_size: int = 5  # HDBSCAN: smallest channel count that counts as a cluster
+    min_samples: int = 0  # HDBSCAN min_samples; if 0, then default to min_cluster_size
+
+    n_bootstrap: int = 200  # number of bootstrap re-clusterings (B) for the stability core
+
+    direction_handling: str = "encode"  # Mean Flow Direction is circular; should not treat as linear, encode as (cos,sin) or drop
+
+    min_channels: int = 10  # refuse/warn if below these many channels
+    random_seed: int = 0
+
+@dataclass
 class BarcodeConfig(BaseConfig):
     channels: ChannelConfig = field(default_factory=ChannelConfig)
     image_binarization_parameters: BinarizationConfig = field(default_factory=BinarizationConfig)
@@ -187,6 +213,7 @@ class BarcodeConfig(BaseConfig):
     optical_flow_parameters: OpticalFlowConfig = field(default_factory=OpticalFlowConfig)
     reader: ReaderConfig = field(default_factory=ReaderConfig)
     writer: WriterConfig = field(default_factory=WriterConfig)
+    cluster: ClusterConfig = field(default_factory=ClusterConfig)
     
     def save_to_yaml(self, filepath: str) -> None:
         """Save configuration to YAML file."""
@@ -317,6 +344,7 @@ GUI_CONFIG_CLASSES = [
     ComparisonConfig,
     ModuleConfig,
     VisualizationConfig,
+    ClusterConfig,
 ]
 
 

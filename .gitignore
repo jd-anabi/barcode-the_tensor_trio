@@ -1,0 +1,30 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE / editor settings
+.idea/
+.vscode/
+*.swp
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Clustering test scratch (see analysis/clustering/)
+clustering_*test*/
+clustering_smoke_out/
+
+# BARCODE run outputs, if ever produced inside the repo
+# (normally these are written alongside the input data, not here)
+*BARCODE Output/
+*BARCODE Clustering/
+* Clustering/
+Error Log.txt
+Time.txt

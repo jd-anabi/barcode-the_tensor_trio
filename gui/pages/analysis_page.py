@@ -79,17 +79,27 @@ def create_processing_worker(
                     )
                     return
                 sort_choice = None if sort_param == "Default" else sort_param
-                
+
+                # Clustering is independent of the aggregate/comparison outputs: run it
+                # whenever it's toggled on, so a user can cluster without also being
+                # forced to produce an aggregate CSV.
+                if config.cluster.enabled:
+                    import os
+                    from analysis.clustering import load_analyze, run_clustering
+                    table, loaded = load_analyze(csv_paths)
+                    out_dir = os.path.join(os.path.dirname(csv_paths[0]), "BARCODE Clustering")
+                    run_clustering(table, config.cluster, out_dir, results=loaded)
+
                 if generate_comparison_barcodes:
                     compare_multiple_csvs(csv_paths, sort_choice, separate_channels)
 
-                if not combined_location and not generate_comparison_barcodes:
+                if not combined_location and not generate_comparison_barcodes and not config.cluster.enabled:
                     messagebox.showerror("Error", "No aggregate location specified.")
                     return
-                
-                if not generate_comparison_barcodes:
+
+                if not generate_comparison_barcodes and combined_location:
                     generate_aggregate_csv(
-                        csv_paths, combined_location, generate_agg_barcode, sort_choice, 
+                        csv_paths, combined_location, generate_agg_barcode, sort_choice,
                         separate_channels=separate_channels, metrics_to_visualize=metrics_to_visualize,
                     )
 

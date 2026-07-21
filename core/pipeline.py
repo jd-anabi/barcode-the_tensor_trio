@@ -219,3 +219,17 @@ def run_analysis(root_dir: str, config: BarcodeConfig, input_config: InputConfig
     timer.stop()
 
     save_analysis_results(all_results, base_path, base_name, config, input_config, ff_loc, is_single_file)
+
+    # Optional unsupervised clustering over the metrics just computed, straight from
+    # memory, no CSV round-trip. Off unless ClusterConfig.enabled is set.
+    if getattr(config, "cluster", None) is not None and config.cluster.enabled and all_results:
+        try:
+            from analysis.clustering import normalize_generate, run_clustering
+            table = normalize_generate(all_results, dataset=base_name)
+            run_clustering(table, config.cluster,
+                           os.path.join(base_path, base_name + " Clustering"),
+                           results=all_results)
+        except Exception as e:
+            print(f"Clustering failed: {type(e).__name__}: {e}")
+            with open(ff_loc, "a", encoding="utf-8") as log_file:
+                log_file.write(f"Clustering failed, Exception: {str(e)}\n")
