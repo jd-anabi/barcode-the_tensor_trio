@@ -4,6 +4,7 @@ from tkinter import ttk, filedialog
 from gui.config import BarcodeConfigGUI, AggregationConfigGUI
 from core import ChannelResults
 
+from gui.frames.clustering_controls import create_clustering_controls
 
 def create_barcode_frame(
     parent, config: BarcodeConfigGUI, aggregation_config: AggregationConfigGUI
@@ -114,5 +115,8 @@ def create_barcode_frame(
                                                onvalue=1, offvalue = 0,
                                                command = updateActivatedMetrics)
     activated_metrics_menu.grid(row=row_ba, column=0, sticky="w", padx=5, pady=5)
+    row_ba += 1
+
+    row_ba = create_clustering_controls(frame, config.cluster, row_ba)
 
     return frame

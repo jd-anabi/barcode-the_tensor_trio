@@ -158,6 +158,7 @@ def generate_combined_barcode(
     separate_channels: bool = True,
     physical_units: bool = False,
     metrics_to_visualize: List[bool] = None,
+    row_labels: List[str] = None,
 ) -> None:
     """
     Generate barcode visualization from structured ChannelResults.
@@ -277,7 +278,15 @@ def generate_combined_barcode(
         barcode_image = np.repeat(barcode, 5, axis=0)  # Make bars more visible
 
         barcode_ax.imshow(barcode_image, aspect="auto")
-        barcode_ax.axis("off")
+        if row_labels is not None and len(row_labels) == len(filtered_data):
+            # each source row was repeated 5x vertically, so centre the tick at 5*i + 2
+            barcode_ax.set_yticks([5 * i + 2 for i in range(len(row_labels))])
+            barcode_ax.set_yticklabels(row_labels, fontsize=5)
+            barcode_ax.set_xticks([])
+            for side in ("top", "right", "bottom"):
+                barcode_ax.spines[side].set_visible(False)
+        else:
+            barcode_ax.axis("off")
 
         # Save figure
         fig.savefig(channel_figpath, bbox_inches="tight", pad_inches=0)
