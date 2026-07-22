@@ -743,6 +743,72 @@ class ClusterConfigGUI:
         self.random_seed.set(new_config.random_seed)
 
 @dataclass
+class FeatureImportanceConfigGUI:
+    """Auto-generated GUI wrapper for FeatureImportanceConfig"""
+    _core_config: FeatureImportanceConfig = field(default_factory=FeatureImportanceConfig)
+
+    csv_location: tk.StringVar = field(init=False)
+    model_type: tk.StringVar = field(init=False)
+    target_column: tk.StringVar = field(init=False)
+    tuning: tk.BooleanVar = field(init=False)
+    test_size: tk.DoubleVar = field(init=False)
+    random_seed: tk.IntVar = field(init=False)
+    use_shap: tk.BooleanVar = field(init=False)
+    n_estimators: tk.IntVar = field(init=False)
+    permutation_repeats: tk.IntVar = field(init=False)
+    group_by_file: tk.BooleanVar = field(init=False)
+    min_samples: tk.IntVar = field(init=False)
+    sort_by: tk.StringVar = field(init=False)
+
+    def __post_init__(self):
+        self.csv_location = tk.StringVar(value=self._core_config.csv_location)
+        self.model_type = tk.StringVar(value=self._core_config.model_type)
+        self.target_column = tk.StringVar(value=self._core_config.target_column)
+        self.tuning = tk.BooleanVar(value=self._core_config.tuning)
+        self.test_size = tk.DoubleVar(value=self._core_config.test_size)
+        self.random_seed = tk.IntVar(value=self._core_config.random_seed)
+        self.use_shap = tk.BooleanVar(value=self._core_config.use_shap)
+        self.n_estimators = tk.IntVar(value=self._core_config.n_estimators)
+        self.permutation_repeats = tk.IntVar(value=self._core_config.permutation_repeats)
+        self.group_by_file = tk.BooleanVar(value=self._core_config.group_by_file)
+        self.min_samples = tk.IntVar(value=self._core_config.min_samples)
+        self.sort_by = tk.StringVar(value=self._core_config.sort_by)
+
+    @property
+    def config(self) -> FeatureImportanceConfig:
+        """Get current config from GUI values"""
+        return FeatureImportanceConfig(
+            csv_location=self.csv_location.get(),
+            model_type=self.model_type.get(),
+            target_column=self.target_column.get(),
+            tuning=self.tuning.get(),
+            test_size=self.test_size.get(),
+            random_seed=self.random_seed.get(),
+            use_shap=self.use_shap.get(),
+            n_estimators=self.n_estimators.get(),
+            permutation_repeats=self.permutation_repeats.get(),
+            group_by_file=self.group_by_file.get(),
+            min_samples=self.min_samples.get(),
+            sort_by=self.sort_by.get(),
+        )
+
+    def update_gui(self, new_config: FeatureImportanceConfig):
+        """Update GUI from new config values"""
+        self._core_config = new_config
+        self.csv_location.set(new_config.csv_location)
+        self.model_type.set(new_config.model_type)
+        self.target_column.set(new_config.target_column)
+        self.tuning.set(new_config.tuning)
+        self.test_size.set(new_config.test_size)
+        self.random_seed.set(new_config.random_seed)
+        self.use_shap.set(new_config.use_shap)
+        self.n_estimators.set(new_config.n_estimators)
+        self.permutation_repeats.set(new_config.permutation_repeats)
+        self.group_by_file.set(new_config.group_by_file)
+        self.min_samples.set(new_config.min_samples)
+        self.sort_by.set(new_config.sort_by)
+
+@dataclass
 class BarcodeConfigGUI:
     """Auto-generated master GUI configuration"""
     _core_config: BarcodeConfig = field(default_factory=BarcodeConfig)
@@ -787,11 +853,13 @@ class AnalysisConfigGUI:
     aggregation: AggregationConfigGUI = field(init=False)
     comparison: ComparisonConfigGUI = field(init=False)
     visualization: VisualizationConfigGUI = field(init=False)
+    feature_importance: FeatureImportanceConfigGUI = field(init=False)
 
     def __post_init__(self):
         self.aggregation = AggregationConfigGUI(self._core_config.aggregation)
         self.comparison = ComparisonConfigGUI(self._core_config.comparison)
         self.visualization = VisualizationConfigGUI(self._core_config.visualization)
+        self.feature_importance = FeatureImportanceConfigGUI(self._core_config.feature_importance)
 
     @property
     def config(self) -> AnalysisConfig:
@@ -800,4 +868,5 @@ class AnalysisConfigGUI:
             aggregation=self.aggregation.config,
             comparison=self.comparison.config,
             visualization=self.visualization.config,
+            feature_importance=self.feature_importance.config,
         )

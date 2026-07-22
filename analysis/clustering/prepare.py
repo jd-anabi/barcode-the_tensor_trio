@@ -10,7 +10,7 @@ Standardization is deliberately NOT done here, it must be fit inside each resamp
 fold, so it lives in `standardize()` and is called by the stability loop.
 """
 
-from typing import List, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -22,9 +22,20 @@ from analysis.clustering.normalize import ChannelTable
 def prepare(
     table: ChannelTable,
     direction_handling: str = "encode",   # "encode" (cos,sin) | "drop" | "linear"
-    drop_flags: Sequence[int] = (1, 2),   # dim (1) and saturated (2); NOT 3/4 (they cap one metric)
+    drop_flags: Sequence[int] = (1, 2),   # dim (1) and saturated (2); NOT 3/4
+    max_column_nan_fraction: float = 0.30,
+    required_columns: Optional[Sequence[str]] = None,
 ) -> Tuple[ChannelTable, dict]:
-    """Return a cleaned ChannelTable (features only in X, IDs alongside) + a report dict."""
+    """Return a cleaned ChannelTable (features only in X, IDs alongside) + a report dict.
+
+    A metric that is NaN for a large share of channels is dropped as a COLUMN rather than
+    being allowed to take all those channels down as rows -- at these sample sizes losing
+    one metric is far cheaper than losing half the dataset.
+
+    When `required_columns` is given (subset mode), only those columns are checked when
+    deciding whether to drop a row: a channel should not be discarded over a NaN in a
+    metric that is not being clustered on.
+    """
     names = list(table.feature_names)
     X = table.X.astype(float, copy=True)
     vids, chans = list(table.video_ids), list(table.channel_ids)
@@ -48,7 +59,7 @@ def prepare(
     take_rows(keep)
     report["dropped_flagged"] = dropped_flagged
 
-    # 2. Circular Mean Flow Direction (θ ∈ [-π, π] radians)
+    # 2. Circular Mean Flow Direction (theta in radians)
     theta_name = Metrics.MEAN_THETA.value
     if theta_name in names:
         j = names.index(theta_name)
@@ -63,14 +74,31 @@ def prepare(
     else:
         report["direction_handling"] = f"{direction_handling} (no theta column present)"
 
-    # 3. Drop all-NaN columns
-    allnan = np.isnan(X).all(axis=0) if X.shape[0] else np.zeros(X.shape[1], bool)
-    report["dropped_all_nan_columns"] = [names[j] for j in range(len(names)) if allnan[j]]
-    X = X[:, ~allnan]
-    names = [names[j] for j in range(len(names)) if not allnan[j]]
+    def _resolve(reqs) -> set:
+        """Map requested metric names to column indices, following the (cos)/(sin) encoding."""
+        out = set()
+        for nm in reqs or []:
+            for candidate in (nm, f"{nm} (cos)", f"{nm} (sin)"):
+                if candidate in names:
+                    out.add(names.index(candidate))
+        return out
 
-    # 4. Drop rows with any residual NaN
-    row_nan = np.isnan(X).any(axis=1) if X.shape[0] else np.zeros(0, bool)
+    # 3. Drop columns that are too sparsely populated to be usable.
+    #    Required columns are exempt unless they are entirely NaN.
+    required = _resolve(required_columns)
+    n_rows = max(X.shape[0], 1)
+    frac = np.isnan(X).sum(axis=0) / n_rows
+    keep_col = np.array([(frac[j] < 1.0) if j in required else (frac[j] <= max_column_nan_fraction)
+                         for j in range(len(names))])
+    report["dropped_nan_columns"] = [(names[j], round(float(frac[j]), 3))
+                                     for j in range(len(names)) if not keep_col[j]]
+    X = X[:, keep_col]
+    names = [names[j] for j in range(len(names)) if keep_col[j]]
+
+    # 4. Drop rows with a NaN in any column that will actually be used
+    required = _resolve(required_columns)
+    check = sorted(required) if required else list(range(X.shape[1]))
+    row_nan = np.isnan(X[:, check]).any(axis=1) if X.shape[0] and check else np.zeros(X.shape[0], bool)
     report["dropped_nan_rows"] = [(vids[i], chans[i]) for i in range(len(vids)) if row_nan[i]]
     take_rows([i for i in range(len(vids)) if not row_nan[i]])
 

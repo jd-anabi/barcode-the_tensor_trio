@@ -25,6 +25,7 @@ clustering_smoke_out/
 # (normally these are written alongside the input data, not here)
 *BARCODE Output/
 *BARCODE Clustering/
+*BARCODE Feature Importance/
 * Clustering/
 Error Log.txt
 Time.txt
