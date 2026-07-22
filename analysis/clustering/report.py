@@ -7,6 +7,7 @@ so every clustered channel traces back to its source video and channel.
 import csv
 import json
 import os
+import sys
 from typing import Optional
 
 import numpy as np
@@ -307,27 +308,45 @@ def write_cluster_roster_csv(path, table, cluster_result, stability_result=None)
 
 
 def plot_coassociation_dendrogram(path, table, stability_result,
-                                  title="Which files cluster together") -> str:
+                                  title="Which files cluster together",
+                                  max_leaves: int = 150, truncate_to: int = 50) -> str:
     """Hierarchical tree from the co-association matrix, with FILENAMES as leaves.
 
-    Merge height = co-association distance (1 - fraction of resamples co-clustered): two
-    channels joining at 0 were always grouped, a join at 1.0 means never. Unlike the
-    heatmap, this names the files.
+    Merge height = co-association distance (1 - fraction of resamples co-clustered).
+
+    Above `max_leaves` channels the tree is truncated to its top `truncate_to` groups:
+    per-file labels are unreadable at that size, and scipy's renderer recurses once per
+    tree level, which overflows Python's stack on deep (unbalanced) trees.
     """
     from scipy.cluster.hierarchy import linkage, dendrogram
     from scipy.spatial.distance import squareform
 
+    n = table.n_channels
     D = 1.0 - np.asarray(stability_result.co_association, dtype=float)
     np.fill_diagonal(D, 0.0)
-    D = (D + D.T) / 2.0                       # exact symmetry required by squareform
+    D = (D + D.T) / 2.0
     Z = linkage(squareform(D, checks=False), method="average")
-    labels = [f"{os.path.basename(v)} ch{c}" for v, c in zip(table.video_ids, table.channel_ids)]
 
-    fig, ax = plt.subplots(figsize=(9, max(4, 0.16 * len(labels))), dpi=300)
-    dendrogram(Z, labels=labels, orientation="right", ax=ax,
-               color_threshold=0.5, leaf_font_size=5)
+    if n > max_leaves:
+        fig, ax = plt.subplots(figsize=(9, 8), dpi=300)
+        kwargs = dict(truncate_mode="lastp", p=truncate_to, show_leaf_counts=True)
+        plot_title = f"{title} (top {truncate_to} groups of {n} channels)"
+    else:
+        labels = [f"{os.path.basename(v)} ch{c}"
+                  for v, c in zip(table.video_ids, table.channel_ids)]
+        fig, ax = plt.subplots(figsize=(9, max(4, 0.16 * n)), dpi=300)
+        kwargs = dict(labels=labels, leaf_font_size=5)
+        plot_title = title
+
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(old_limit, 20000))
+    try:
+        dendrogram(Z, orientation="right", ax=ax, color_threshold=0.5, **kwargs)
+    finally:
+        sys.setrecursionlimit(old_limit)
+
     ax.set_xlabel("co-association distance (1 - fraction co-clustered)")
-    ax.set_title(title)
+    ax.set_title(plot_title)
     for x in (0.25, 0.5, 0.75):
         ax.axvline(x, color="grey", ls=":", lw=0.8)
     fig.tight_layout(); fig.savefig(path); plt.close(fig)
@@ -335,7 +354,7 @@ def plot_coassociation_dendrogram(path, table, stability_result,
 
 
 def plot_cluster_ordered_barcode(figpath_base, results, table, cluster_result,
-                                 physical_units=False, metrics_to_visualize=None):
+                                 physical_units=False, metrics_to_visualize=None, max_rows: int = 400):
     """BARCODE's own colorized barcode, with rows ORDERED BY CLUSTER.
 
     If the clusters are real, the metric fingerprints should form visually distinct
@@ -368,11 +387,19 @@ def plot_cluster_ordered_barcode(figpath_base, results, table, cluster_result,
             row_labels.append(f"— cluster {c} —" if c not in seen else "")
             seen.add(c)
 
+    with open(f"{figpath_base} Row Order.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f);
+        w.writerow(["Row", "Cluster", "File", "Channel"]);
+        w.writerows(rows)
+
+    if len(ordered) > max_rows:
+        print(f"Cluster-ordered barcode skipped: {len(ordered)} channels exceeds {max_rows}. "
+              f"The barcode renderer scales figure height with row count, which would exceed "
+              f"matplotlib's 65536 px limit. Row order was still written to CSV.")
+        return None
+
     generate_combined_barcode(ordered, figpath_base, separate_channels=False,
                               physical_units=physical_units,
                               metrics_to_visualize=metrics_to_visualize,
                               row_labels=row_labels)
-
-    with open(f"{figpath_base} Row Order.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f); w.writerow(["Row", "Cluster", "File", "Channel"]); w.writerows(rows)
     return f"{figpath_base}.png"

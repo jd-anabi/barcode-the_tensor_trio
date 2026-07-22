@@ -173,10 +173,43 @@ class IntensityDistributionConfig(BaseConfig):
     percentage_frames_evaluated: float = 0.05
 
 @dataclass
+class FeatureImportanceConfig(BaseConfig):
+    """Supervised Random-Forest feature importance over BARCODE metrics.
+
+    Answers the labelled counterpart of the clustering question: given a BARCODE CSV
+    with a ground-truth column appended, which metrics actually drive that outcome?
+    Every field is a scalar on purpose -- the GUI wrapper generator emits `.set()`
+    unconditionally for non-ndarray fields, so a List field would be a latent bug.
+    """
+
+    # global config parameters
+    csv_location: str = ""  # one BARCODE-format CSV with a target column appended
+    model_type: str = "classification"  # "classification" or "regression"
+    target_column: str = ""  # ground-truth column; chosen from the CSV's own header
+
+    # model config parameters
+    tuning: bool = False  # RandomizedSearchCV; ~150 extra model fits
+    test_size: float = 0.25  # fraction of samples held out for evaluation
+    random_seed: int = 42
+
+    use_shap: bool = True  # honoured only when the optional `shap` package imports
+
+    n_estimators: int = 500  # forest size when tuning is off
+    permutation_repeats: int = 20  # permutation_importance n_repeats
+
+    # A video's channels image the same physical sample, so splitting them across
+    # train/test leaks near-duplicates and inflates the reported score. Group by File.
+    group_by_file: bool = True
+
+    min_samples: int = 20  # refuse/warn below these many labelled rows
+    sort_by: str = "permutation"  # "permutation", "impurity", or "shap"
+
+@dataclass
 class AnalysisConfig(BaseConfig):
     aggregation: AggregationConfig = field(default_factory=AggregationConfig)
     comparison: ComparisonConfig = field(default_factory=ComparisonConfig)
     visualization: VisualizationConfig = field(default_factory=VisualizationConfig)
+    feature_importance: FeatureImportanceConfig = field(default_factory=FeatureImportanceConfig)
 
 @dataclass
 class ClusterConfig(BaseConfig):
@@ -345,6 +378,7 @@ GUI_CONFIG_CLASSES = [
     ModuleConfig,
     VisualizationConfig,
     ClusterConfig,
+    FeatureImportanceConfig,
 ]
 
 

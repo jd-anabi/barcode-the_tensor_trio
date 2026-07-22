@@ -27,7 +27,11 @@ def run_clustering(table, config, output_dir, results=None, progress=None):
     for the cluster-ordered barcode. Returns {name: path}, or None if a guardrail blocked
     the run (which is a legitimate outcome, not an error).
     """
-    clean, prep_report = prepare(table, direction_handling=config.direction_handling)
+    clean, prepare_report = prepare(
+        table,
+        direction_handling=config.direction_handling,
+        required_columns=list(config.selected_metrics or []) if config.mode == "subset" else None,
+    )
 
     if clean.n_channels < config.min_channels:
         print(f"Clustering skipped: only {clean.n_channels} usable channels "
@@ -40,6 +44,10 @@ def run_clustering(table, config, output_dir, results=None, progress=None):
     if config.mode == "subset" and len(config.selected_metrics or []) < 2:
         print("Clustering skipped: subset mode needs at least 2 selected metrics.")
         return None
+    if clean.n_channels > 4000:
+        gb = 3 * clean.n_channels ** 2 * 8 / 1e9
+        print(f"Note: {clean.n_channels} channels means the co-association matrices need "
+              f"roughly {gb:.1f} GB of memory.")
 
     reduce_kwargs = {"mode": config.mode,
                      "feature_names": clean.feature_names,
@@ -73,6 +81,6 @@ def run_clustering(table, config, output_dir, results=None, progress=None):
                 n_resamples=100, random_state=int(config.random_seed)),
         }
 
-    return generate_report(output_dir, table=clean, prepare_report=prep_report,
+    return generate_report(output_dir, table=clean, prepare_report=prepare_report,
                            reduction_meta=red_meta, X_reduced=Xr, cluster_result=res,
                            stability_result=st, results=results, extra=extra)

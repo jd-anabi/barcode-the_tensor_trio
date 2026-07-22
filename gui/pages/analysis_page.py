@@ -8,6 +8,7 @@ import traceback
 from gui.frames.analysis.barcode_tab import create_barcode_frame
 from gui.frames.analysis.comparison_tab import create_comparison_frame
 from gui.frames.analysis.visualization_tab import create_visualization_frame
+from gui.frames.analysis.feature_importance_tab import create_feature_importance_frame
 
 from core import BarcodeConfig, InputConfig, PreviewConfig, AnalysisConfig
 
@@ -32,31 +33,40 @@ def create_tabs(parent, config: BarcodeConfigGUI, input_config: InputConfigGUI,
             input_config.mode.set("comp")
         elif selected_tab == "Reduced Data Structure Visualization":
             input_config.mode.set("rds")
+        elif selected_tab == "Feature Importance":
+            input_config.mode.set("fi")
     notebook = ttk.Notebook(parent, takefocus=0)
     aggregation_config = analysis_config.aggregation
     comparison_config = analysis_config.comparison
     visualization_config = analysis_config.visualization
+    feature_importance_config = analysis_config.feature_importance
     notebook.pack(fill="both", expand=True)
 
     barcode_frame = create_barcode_frame(notebook, config, aggregation_config)
     comparison_frame = create_comparison_frame(notebook, config, comparison_config)
     visualization_frame = create_visualization_frame(notebook, config, visualization_config)
+    importance_frame = create_feature_importance_frame(notebook, config, feature_importance_config)
     notebook.add(barcode_frame, text="Barcode Generator & CSV Aggregator")
     notebook.add(comparison_frame, text = "Barcode Metric Comparison")
     notebook.add(visualization_frame, text="Reduced Data Structure Visualization")
+    # Must match the on_tab_selection branch above exactly: a mismatch leaves mode on the
+    # previously selected tab and the run button silently does the wrong thing.
+    notebook.add(importance_frame, text="Feature Importance")
     notebook.bind("<<NotebookTabChanged>>", on_tab_selection)
 
-    return notebook
+    return notebook, importance_frame
 
 def create_processing_worker(
     config: BarcodeConfig,
     input_config: InputConfig,
     analysis_config: AnalysisConfig,
+    on_importance=None,
 ):
     """Create the worker function for processing in background thread"""
     aggregation_config = analysis_config.aggregation
     comparison_config = analysis_config.comparison
     visualization_config = analysis_config.visualization
+    importance_config = analysis_config.feature_importance
 
     def worker():
         try:
@@ -107,6 +117,26 @@ def create_processing_worker(
                 from utils.writer import create_metric_comparison
                 create_metric_comparison(comparison_config)
 
+            elif mode == "fi":
+                import os
+                from analysis.supervised import run_feature_importance
+
+                csv_path = importance_config.csv_location
+                if not csv_path:
+                    messagebox.showerror("Error", "No CSV file selected for feature importance.")
+                    return
+                if not importance_config.target_column:
+                    messagebox.showerror(
+                        "Error", "No target column selected for feature importance.")
+                    return
+
+                out_dir = os.path.join(os.path.dirname(csv_path), "BARCODE Feature Importance")
+                payload = run_feature_importance([csv_path], importance_config, out_dir)
+                # The tab owns the redraw and marshals it onto the main thread; a guardrail
+                # result (None) still gets delivered so the chart can say the run was skipped.
+                if on_importance:
+                    on_importance(payload)
+
         except Exception as e:
             print(f"Error during processing: {e}")
             print(traceback.format_exc())
@@ -137,13 +167,16 @@ def create_combine_page(parent, switch_page):
         # input_config.mode = "agg"
         analysis_config = gui_analysis_config.config
 
-        worker = create_processing_worker(config, input_config, analysis_config)
+        worker = create_processing_worker(
+            config, input_config, analysis_config,
+            on_importance=importance_frame.deliver_result,
+        )
         threading.Thread(target=worker, daemon=True).start()
 
     back_button = ttk.Button(frame, text="← Back", command=lambda: switch_page("home"))
     back_button.pack(anchor="w", padx=20, pady=10)
 
-    create_tabs(
+    notebook, importance_frame = create_tabs(
         frame,
         gui_config,
         gui_input_config,
